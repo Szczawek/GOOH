@@ -1,0 +1,17 @@
+# Unreal Engine intermediate files
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+ParagonCountess/
+# VS files
+.vscode/
+.vs/
+*.VC.db
+*.sln
+
+# Mac-specific
+.DS_Store
+
+# Ignore build output
+Build/
