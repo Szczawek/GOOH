@@ -20,3 +20,13 @@ void UGameUI::NativeConstruct()
 	}
 }
 
+void UGameUI::SetStaminaBar(float Value)
+{
+	StaminaBar->SetPercent(Value);
+}
+
+void UGameUI::SetHealthBar(float Value)
+{
+	HealthBar->SetPercent(Value);
+}
+

@@ -4,6 +4,8 @@
 #include "GameFramework/Character.h"
 #include <InputAction.h>
 #include <Blueprint/UserWidget.h>
+#include "../UI/GameUI.h"
+#include "../UI/MenuUI.h"
 #include <Camera/CameraComponent.h>
 #include <Components/CanvasPanel.h>
 #include <GameFramework/SpringArmComponent.h>
@@ -26,6 +28,12 @@ enum class EActiveWeapon : uint8 {
 	Fist,
 	Weapon,
 	WhiteWeapon
+};
+
+UENUM()
+enum class EActiveCamera : uint8 {
+	Fov,
+	Body
 };
 
 USTRUCT(BlueprintType)
@@ -101,34 +109,45 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Inputs")
 	UInputAction* MenuWindowAction;
+	
+	UPROPERTY(EditAnywhere, Category = "Inputs")
+	UInputAction* ScrollViewAction;
+
+	UPROPERTY(EditAnywhere, Category = "Inputs")
+	UInputAction* SwitchViewAction;
 
 	UPROPERTY(EditAnywhere, Category = "Inputs")
 	UInputMappingContext* GamerContext;
 	
+	//Cameras 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	USpringArmComponent* SpringArm;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	UCameraComponent* FovCamera;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	UCameraComponent* BodyCamera;
+
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	UCharacterMovementComponent* MoveComponent;
 	
 	//#Widget
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
-	TSubclassOf<UUserWidget> GameWidgetClass;
+	TSubclassOf<UGameUI> GameWidgetClass;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
-	TSubclassOf<UUserWidget> MenuWidgetClass;
+	TSubclassOf<UMenuUI> MenuWidgetClass;
 
 	UPROPERTY(BlueprintReadWrite)
-	UUserWidget* GameWidget;
+	UGameUI* GameWidget;
 
 	UPROPERTY(BlueprintReadWrite)
-	UUserWidget* MenuWidget;
+	UMenuUI* MenuWidget;
 
 public: 
 
+	// Enums/Structures
 	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Action")
 	FGamerAction Action;
 
@@ -142,8 +161,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gamer Stats")
 	FGamerStats GamerStats;
 
+	// By default, it should be always on Fov;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera type" )
+	EActiveCamera ActiveCamera = EActiveCamera::Fov;
+
+
 	void Move(const FInputActionValue& Value); 
 	void Look(const FInputActionValue& Value);
+	void ScrollView(const FInputActionValue& Value);
 	void BeginJump();
 	void EndJump();
 	void Sprint();
@@ -154,6 +179,7 @@ public:
 	void EndSneak();
 	void Attack();
 	void MenuWindow();
+	void SwitchView();
 
 protected: 
 	FTimerHandle JumpTimmer;

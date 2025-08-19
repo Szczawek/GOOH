@@ -14,6 +14,8 @@ AGamer::AGamer()
 	FovCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 	SpringArm->SetupAttachment(RootComponent);
 	SpringArm->bUsePawnControlRotation = true;
+	BodyCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Body Camera"));
+	BodyCamera->SetupAttachment(GetMesh());
 	MoveComponent->MaxWalkSpeed = GamerSpeed.Normal;
 }
 
@@ -28,12 +30,12 @@ void AGamer::BeginPlay()
 	}
 
 	if (GameWidgetClass) {
-		GameWidget = CreateWidget<UUserWidget>(GetWorld(), GameWidgetClass);
+		GameWidget = CreateWidget<UGameUI>(GetWorld(), GameWidgetClass);
 		GameWidget->AddToViewport();
 	}
 
 	if (MenuWidgetClass) {
-		MenuWidget = CreateWidget<UUserWidget>(GetWorld(), GameWidgetClass);
+		MenuWidget = CreateWidget<UMenuUI>(GetWorld(), GameWidgetClass);
 	}
 }
 
@@ -41,6 +43,12 @@ void AGamer::BeginPlay()
 void AGamer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (GamerStats.Stamina < 1.0f) {
+		float Stamina = GamerStats.Stamina += .1f * DeltaTime;
+		GamerStats.Stamina = Stamina;
+		GameWidget->SetStaminaBar(Stamina);
+	}
 
 }
 
@@ -56,14 +64,14 @@ void AGamer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		Input->BindAction(JumpAction, ETriggerEvent::Started, this, &AGamer::BeginJump);
 		Input->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGamer::Look);
 		Input->BindAction(SprintAction, ETriggerEvent::Started, this, &AGamer::Sprint);
-		
+		Input->BindAction(ScrollViewAction, ETriggerEvent::Triggered, this, &AGamer::ScrollView);
+		Input->BindAction(SwitchViewAction, ETriggerEvent::Started, this, &AGamer::SwitchView);
 		//Description:: Canceling the sprint event is activating the walk event, because when the character stops moving, it will
 		// automatically change its status to idle.When the character is in idle status, all actions will be canceled, so cancelling 
 		// the sprint event will not stop the character, but will allow the character to move forward.
 		Input->BindAction(SprintAction, ETriggerEvent::Completed, this, &AGamer::EndSprint);
 		Input->BindAction(SneakAction, ETriggerEvent::Started, this, &AGamer::Sneak);
 		Input->BindAction(SneakAction, ETriggerEvent::Completed, this, &AGamer::EndSneak);
-		
 		Input->BindAction(AttackAction, ETriggerEvent::Started, this, &AGamer::Attack);
 
 		Input->BindAction(MenuWindowAction, ETriggerEvent::Started, this, &AGamer::MenuWindow);
@@ -122,6 +130,11 @@ void AGamer::Look(const FInputActionValue& Value)
 	AddControllerYawInput(ValueVector.X);
 }
 
+void AGamer::ScrollView(const FInputActionValue& Value)
+{
+	const FVector2D ValueVector = Value.Get<FVector2D>();
+}
+
 // Change it to Tick mechanizm::
 // In beginJUMP set status to leviting, and set logic in Tick to checks if Person was jumping or fell from clif, next logic in the same block is, if person touch the ground 
 // then call function End Jump();
@@ -145,9 +158,9 @@ void AGamer::Attack() {
 	switch (ActiveWeapon) {
 	case EActiveWeapon::WhiteWeapon:
 	case EActiveWeapon::Fist:
-		if (GamerStats.Stamina <= 0.f) return;
+		if (GamerStats.Stamina <= 0.1f) return;
 			GamerStats.Stamina -= .1f;
-			GEngine->AddOnScreenDebugMessage(0, 5.0f, FColor::Red, TEXT("Test"));
+			GameWidget->SetStaminaBar(GamerStats.Stamina);
 			break;
 		case EActiveWeapon::Weapon:
 		    break;
@@ -156,12 +169,25 @@ void AGamer::Attack() {
 }
 
 void AGamer::MenuWindow() {
-	if (GameWidget->CanvasPanel) {
-		
-	}
-	if(UCanvasPanel* Panel = Cast<UCanvasPanel>(GameWidget->GetWidgetFromName(TEXT("CanvasPanel")))) {
-		GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Red, TEXT("Panel"));
-		Panel->AddChild(MenuWidget);
-	}
+	
 	GEngine->AddOnScreenDebugMessage(1, 5.0f, FColor::Red, TEXT("Open"));
+}
+
+void AGamer::SwitchView()
+{
+	switch(ActiveCamera) {
+		case EActiveCamera::Fov:
+			ActiveCamera = EActiveCamera::Body;
+			FovCamera->SetActive(false);
+			BodyCamera->SetActive(true);
+			GetMesh()->SetVisibility(false, true);
+			GetMesh()->SetCastHiddenShadow(true);
+			break;
+		case EActiveCamera::Body:
+			ActiveCamera = EActiveCamera::Fov;
+			BodyCamera->SetActive(false);
+			FovCamera->SetActive(true);
+			GetMesh()->SetVisibility(true, true);
+			GetMesh()->SetCastHiddenShadow(false);
+	}
 }

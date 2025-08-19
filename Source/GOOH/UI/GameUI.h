@@ -30,7 +30,13 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional));
 	TObjectPtr<UProgressBar> StaminaBar;
 
-	UPROPERTY(BlueprintReadWrite, meta=(BindWidgetOptional))
+	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
 	TObjectPtr<UCanvasPanel> CanvasPanel;
 
+
+	UFUNCTION()
+	void SetStaminaBar(float Value);
+
+	UFUNCTION()
+	void SetHealthBar(float Value);
 };
