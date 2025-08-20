@@ -44,12 +44,15 @@ void AGamer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (GamerStats.Stamina < 1.0f) {
-		float Stamina = GamerStats.Stamina += .1f * DeltaTime;
-		GamerStats.Stamina = Stamina;
-		GameWidget->SetStaminaBar(Stamina);
+	if (CurrentAction == ECurrentAction::Sprinting) {
+		float Stamina = GamerStats.Stamina - .1f * DeltaTime;
+		SetStamina(Stamina);
 	}
 
+	if (GamerStats.Stamina < 1.0f && CurrentAction != ECurrentAction::Sprinting) {
+		float Stamina = GamerStats.Stamina + .1f * DeltaTime;
+		SetStamina(Stamina);
+	}
 }
 
 // Called to bind functionality to input
@@ -156,12 +159,9 @@ void AGamer::EndJump()
 
 void AGamer::Attack() {
 	switch (ActiveWeapon) {
-	case EActiveWeapon::WhiteWeapon:
-	case EActiveWeapon::Fist:
-		if (GamerStats.Stamina <= 0.1f) return;
-			GamerStats.Stamina -= .1f;
-			GameWidget->SetStaminaBar(GamerStats.Stamina);
-			break;
+		case EActiveWeapon::WhiteWeapon:
+		case EActiveWeapon::Fist:
+		break;
 		case EActiveWeapon::Weapon:
 		    break;
 	}
@@ -189,5 +189,34 @@ void AGamer::SwitchView()
 			FovCamera->SetActive(true);
 			GetMesh()->SetVisibility(true, true);
 			GetMesh()->SetCastHiddenShadow(false);
+	}
+}
+
+void AGamer::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	float EndTimmer = GetWorld()->GetTimeSeconds();
+	float Dif = EndTimmer - FallingTimeStart;
+	float Health = GamerStats.Health;
+	if (Dif >= 1.5f) {
+		Health -= .2f;
+	} else if (Dif >= 2.f) {
+		Health -= .4f;
+	}
+	else if (Dif >= 3.5f) {
+		Health = 0.f;
+	}
+	if (Health < 0.0f) {
+		Health = 0.0f;
+	}
+	SetHealth(Health);
+}
+
+void AGamer::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PrevCutomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PrevCutomMode);
+	if (MoveComponent->IsFalling()) {
+		FallingTimeStart = GetWorld()->GetTimeSeconds();
 	}
 }

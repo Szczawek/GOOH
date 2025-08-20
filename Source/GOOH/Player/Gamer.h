@@ -83,7 +83,7 @@ protected:
 
 	virtual void BeginPlay() override;
 
-public:	
+public:
 
 	virtual void Tick(float DeltaTime) override;
 
@@ -109,7 +109,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Inputs")
 	UInputAction* MenuWindowAction;
-	
+
 	UPROPERTY(EditAnywhere, Category = "Inputs")
 	UInputAction* ScrollViewAction;
 
@@ -118,7 +118,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Inputs")
 	UInputMappingContext* GamerContext;
-	
+
 	//Cameras 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	USpringArmComponent* SpringArm;
@@ -129,13 +129,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	UCameraComponent* BodyCamera;
 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UCharacterMovementComponent* MoveComponent;
-	
+
 	//#Widget
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	TSubclassOf<UGameUI> GameWidgetClass;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	TSubclassOf<UMenuUI> MenuWidgetClass;
 
@@ -145,10 +145,10 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	UMenuUI* MenuWidget;
 
-public: 
+public:
 
 	// Enums/Structures
-	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Action")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
 	FGamerAction Action;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
@@ -162,11 +162,11 @@ public:
 	FGamerStats GamerStats;
 
 	// By default, it should be always on Fov;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera type" )
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera type")
 	EActiveCamera ActiveCamera = EActiveCamera::Fov;
 
 
-	void Move(const FInputActionValue& Value); 
+	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void ScrollView(const FInputActionValue& Value);
 	void BeginJump();
@@ -181,9 +181,12 @@ public:
 	void MenuWindow();
 	void SwitchView();
 
-protected: 
+protected:
+	virtual void Landed(const FHitResult& Hit) override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PrevCutomMode) override;
 	FTimerHandle JumpTimmer;
 
+	float FallingTimeStart;
 public:
 	UFUNCTION()
 	void SetAction(ECurrentAction ActionType) {
@@ -193,10 +196,10 @@ public:
 		Action.bIsWalking = false;
 		Action.bIsIdle = false;
 
-		if (ActionType != ECurrentAction::Jumping) { 
+		if (ActionType != ECurrentAction::Jumping) {
 			CurrentAction = ActionType;
 		};
-		
+
 		switch (ActionType) {
 		case ECurrentAction::Walking:
 			Action.bIsWalking = true;
@@ -206,7 +209,7 @@ public:
 			Action.bIsSneaking = true;
 			MoveComponent->MaxWalkSpeed = GamerSpeed.Sneak;
 			break;
-		case ECurrentAction::Sprinting: 
+		case ECurrentAction::Sprinting:
 			Action.bIsSprinting = true;
 			MoveComponent->MaxWalkSpeed = GamerSpeed.Sprint;
 			break;
@@ -226,4 +229,23 @@ public:
 		float Sneak = 300.f;
 	} GamerSpeed;
 
+	void SetStamina(float Value) {
+		float Current = GamerStats.Stamina;
+		if (Value <= 0.0f) {
+			SetAction(ECurrentAction::Walking);
+			return;
+		}
+		if (Value >= 1.f) return;
+		GamerStats.Stamina = Value;
+		GameWidget->SetStaminaBar(Value);
+	}
+
+	void SetHealth(float Value) {
+		float Current = GamerStats.Health;
+		if (Current - Value < 0.f) {
+			Value = 0.f;
+		}
+		GamerStats.Health = Value;
+		GameWidget->SetHealthBar(Value);
+	}
 };
