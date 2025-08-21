@@ -14,13 +14,16 @@
 #include "Gamer.generated.h"
 
 
+// All new properties should be on end of enum. 
+// By default it is loading index 0 #IDLE
+
 UENUM()
 enum class ECurrentAction : uint8 {
+	Idle,
 	Jumping,
 	Sprinting,
 	Walking,
-	Sneaking,
-	Idle
+	Sneaking
 };
 
 UENUM()
@@ -136,14 +139,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	TSubclassOf<UGameUI> GameWidgetClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
-	TSubclassOf<UMenuUI> MenuWidgetClass;
-
 	UPROPERTY(BlueprintReadWrite)
 	UGameUI* GameWidget;
-
-	UPROPERTY(BlueprintReadWrite)
-	UMenuUI* MenuWidget;
 
 public:
 
@@ -152,8 +149,12 @@ public:
 	FGamerAction Action;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
-	ECurrentAction CurrentAction = ECurrentAction::Idle;
+	ECurrentAction CurrentAction;
+	
+	ECurrentAction QueueAction;
 
+	bool bQueueIsActive = false;
+	
 	// Development Option, to change;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Type of weapon")
 	EActiveWeapon ActiveWeapon = EActiveWeapon::WhiteWeapon;
@@ -184,7 +185,6 @@ public:
 protected:
 	virtual void Landed(const FHitResult& Hit) override;
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PrevCutomMode) override;
-	FTimerHandle JumpTimmer;
 
 	float FallingTimeStart;
 public:
@@ -215,7 +215,7 @@ public:
 			break;
 		case ECurrentAction::Jumping:
 			Action.bIsJumping = true;
-			MoveComponent->MaxWalkSpeed = GamerSpeed.Normal;
+			MoveComponent->MaxWalkSpeed = GamerSpeed.Sneak;
 			break;
 		case ECurrentAction::Idle:
 			Action.bIsIdle = true;
@@ -248,4 +248,6 @@ public:
 		GamerStats.Health = Value;
 		GameWidget->SetHealthBar(Value);
 	}
+
+	bool bIsMenuOpened = false;
 };

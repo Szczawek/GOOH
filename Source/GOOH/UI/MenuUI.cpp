@@ -12,23 +12,11 @@ void UMenuUI::NativeConstruct()
 			ResumeGameBtn->SetBackgroundColor(FLinearColor::Red);
 		}
 	}
-	//if (MenuBox) {
-	//	if (SettingsText) {
-	//		if (SettingsBtn) {
-	//			SettingsText->SetText(FText::FromString(TEXT("Settings")));
-	//			SettingsBtn->SetContent(SettingsText);
-	//			//MenuBox->AddChildToVerticalBox(SettingsBtn);
-	//		}
-	//	}
-	//	if (ResumeText) {
-	//		if (ResumeBtn) {
-	//			ResumeText->SetText(FText::FromString(TEXT("Resume")));
-	//			ResumeBtn->SetContent(ResumeText);
-	//			//MenuBox->AddChildToVerticalBox(ResumeBtn);
-	//		}
-	//	}
-	//}
-
-
+	if (SettingsBtn) {
+		if (SettingsText) {
+			SettingsText->SetText(FText::FromString(TEXT("Settings")));
+			SettingsBtn->SetContent(SettingsText);
+		}
+	}
 }
 

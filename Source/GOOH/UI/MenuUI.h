@@ -17,10 +17,10 @@ protected:
 
 public:
 
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UButton> SettingsBtn;
 
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UButton> ResumeGameBtn;
 
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))

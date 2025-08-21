@@ -33,10 +33,6 @@ void AGamer::BeginPlay()
 		GameWidget = CreateWidget<UGameUI>(GetWorld(), GameWidgetClass);
 		GameWidget->AddToViewport();
 	}
-
-	if (MenuWidgetClass) {
-		MenuWidget = CreateWidget<UMenuUI>(GetWorld(), GameWidgetClass);
-	}
 }
 
 // Called every frame
@@ -44,7 +40,7 @@ void AGamer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (CurrentAction == ECurrentAction::Sprinting) {
+	if (CurrentAction == ECurrentAction::Sprinting && !Action.bIsJumping) {
 		float Stamina = GamerStats.Stamina - .1f * DeltaTime;
 		SetStamina(Stamina);
 	}
@@ -93,29 +89,54 @@ void AGamer::Move(const FInputActionValue& Value)
 	AddMovementInput(RightVector,VectorValue.X);	
 }
 
+// Queue In Movements component is temporary 
+// Queue In Movements component is temporary 
+
 void AGamer::Idle() {
+	if (Action.bIsJumping){
+		bQueueIsActive = true;
+		QueueAction = ECurrentAction::Idle;
+		return;
+	}	
+	if (!Action.bIsWalking) return;
 	SetAction(ECurrentAction::Idle);
 }
 
 void AGamer::Walk() {
+	if (Action.bIsJumping) {
+		bQueueIsActive = true;
+		QueueAction = ECurrentAction::Walking;
+		return;
+	}
 	if (!Action.bIsIdle) return;
 	SetAction(ECurrentAction::Walking);
 }
 
 void AGamer::EndSneak()
 {
+	if (Action.bIsJumping && !bQueueIsActive) {
+		QueueAction = ECurrentAction::Walking;
+		bQueueIsActive = true;
+		return;
+	}
 	if (!Action.bIsSneaking) return;
 	SetAction(ECurrentAction::Walking);
 }
 
 void AGamer::Sprint()
-{
+{	
 	if (!Action.bIsWalking) return;
+	if (bQueueIsActive) bQueueIsActive = false;
 	SetAction(ECurrentAction::Sprinting);
 }
 
 void AGamer::EndSprint()
 {
+	if (Action.bIsJumping && !bQueueIsActive && MoveComponent->Velocity.Size() > 500.f) {
+		QueueAction = ECurrentAction::Walking;
+		bQueueIsActive = true;
+		return;
+	}
 	if (!Action.bIsSprinting) return;
 	SetAction(ECurrentAction::Walking);
  }
@@ -123,6 +144,7 @@ void AGamer::EndSprint()
 void AGamer::Sneak()
 {
 	if (!Action.bIsWalking) return;
+	if (bQueueIsActive) bQueueIsActive = false;
 	SetAction(ECurrentAction::Sneaking);
 }
 
@@ -138,22 +160,21 @@ void AGamer::ScrollView(const FInputActionValue& Value)
 	const FVector2D ValueVector = Value.Get<FVector2D>();
 }
 
-// Change it to Tick mechanizm::
-// In beginJUMP set status to leviting, and set logic in Tick to checks if Person was jumping or fell from clif, next logic in the same block is, if person touch the ground 
-// then call function End Jump();
 void AGamer::BeginJump()
 {
-	if (Action.bIsJumping) return;
+	if (Action.bIsJumping || GamerStats.Stamina <= 0.0f) return;
 	SetAction(ECurrentAction::Jumping);
 	Jump();
-	GetWorld()->GetTimerManager().SetTimer(JumpTimmer, this, &AGamer::EndJump, 0.4f, false);
 }
 
 void AGamer::EndJump()
 {
-	if (!Action.bIsJumping) return;
 	StopJumping();
-	GetWorld()->GetTimerManager().ClearTimer(JumpTimmer);
+	if (bQueueIsActive) {
+		bQueueIsActive = false;
+		SetAction(QueueAction);
+		return;
+	}
 	SetAction(CurrentAction);
 }
 
@@ -169,8 +190,13 @@ void AGamer::Attack() {
 }
 
 void AGamer::MenuWindow() {
-	
-	GEngine->AddOnScreenDebugMessage(1, 5.0f, FColor::Red, TEXT("Open"));
+	if (!bIsMenuOpened) {
+		bIsMenuOpened = true;
+		GameWidget->SetWidgetOnDisplay(0);
+		return;
+	}
+	GameWidget->TakeWidgetFromDisplay();
+	bIsMenuOpened = false;
 }
 
 void AGamer::SwitchView()
@@ -189,6 +215,7 @@ void AGamer::SwitchView()
 			FovCamera->SetActive(true);
 			GetMesh()->SetVisibility(true, true);
 			GetMesh()->SetCastHiddenShadow(false);
+
 	}
 }
 
@@ -196,15 +223,19 @@ void AGamer::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 
+	if (Action.bIsJumping) {
+		EndJump();
+	}
+
 	float EndTimmer = GetWorld()->GetTimeSeconds();
 	float Dif = EndTimmer - FallingTimeStart;
 	float Health = GamerStats.Health;
-	if (Dif >= 1.5f) {
+	if (Dif >= .9f) {
 		Health -= .2f;
-	} else if (Dif >= 2.f) {
+	} else if (Dif >= 1.4f) {
 		Health -= .4f;
 	}
-	else if (Dif >= 3.5f) {
+	else if (Dif >= 2.2f) {
 		Health = 0.f;
 	}
 	if (Health < 0.0f) {
