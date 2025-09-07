@@ -1,14 +1,9 @@
 #include "GameUI.h"
 
-UGameUI::UGameUI(const FObjectInitializer& ObjectInitializer): Super(ObjectInitializer)
-{
-
-}
-
 void UGameUI::NativeConstruct()
 {
 	Super::NativeConstruct();
-
+	Controller = GetOwningPlayer();
 	if (UserName) {
 		UserName->SetText(FText::FromString(TEXT("Szczawik")));
 	}
@@ -18,7 +13,6 @@ void UGameUI::NativeConstruct()
 	if (StaminaBar) {
 		StaminaBar->SetPercent(1.f);
 	}
-
 	if (WidgetSwitcher) {
 		if (MenuWidgetClass) {
 			UUserWidget* MenuWidget = CreateWidget<UUserWidget>(GetWorld(), MenuWidgetClass);
@@ -40,12 +34,14 @@ void UGameUI::SetHealthBar(float Value) const
 
 void UGameUI::SetWidgetOnDisplay(int8 Index) const
 {
+	SetMenuMode();
 	WidgetSwitcher->SetVisibility(ESlateVisibility::Visible);
 	WidgetSwitcher->SetActiveWidgetIndex(Index);
 }
 
 void UGameUI::TakeWidgetFromDisplay() const
 {
+	RemoveMenuMode();
 	WidgetSwitcher->SetVisibility(ESlateVisibility::Collapsed);
 }
 

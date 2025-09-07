@@ -5,7 +5,6 @@
 #include <InputAction.h>
 #include <Blueprint/UserWidget.h>
 #include "../UI/GameUI.h"
-#include "../UI/MenuUI.h"
 #include <Camera/CameraComponent.h>
 #include <Components/CanvasPanel.h>
 #include <GameFramework/SpringArmComponent.h>
@@ -92,6 +91,9 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	UPROPERTY()
+	APlayerController* PlayerController;
+
 	UPROPERTY(EditAnywhere, Category = "Inputs")
 	UInputAction* MoveAction;
 
@@ -143,6 +145,7 @@ public:
 	UGameUI* GameWidget;
 
 public:
+	bool bWasWalkStarted = false;
 
 	// Enums/Structures
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
@@ -249,5 +252,11 @@ public:
 		GameWidget->SetHealthBar(Value);
 	}
 
-	bool bIsMenuOpened = false;
+	void StopMoving() {
+		bWasWalkStarted = false;
+		SetAction(ECurrentAction::Idle);
+	}
+
+
+	bool bIsCharacterFrozen = false;
 };

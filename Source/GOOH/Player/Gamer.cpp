@@ -23,7 +23,8 @@ AGamer::AGamer()
 void AGamer::BeginPlay()
 {
 	Super::BeginPlay();
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller)) {
+	PlayerController = Cast<APlayerController>(Controller);
+	if(PlayerController) {
 		if (UEnhancedInputLocalPlayerSubsystem* System = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer())) {
 			System->AddMappingContext(GamerContext, 0);
 		}
@@ -51,34 +52,71 @@ void AGamer::Tick(float DeltaTime)
 	}
 }
 
-// Called to bind functionality to input
 void AGamer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	
 	if (UEnhancedInputComponent* Input = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
+		Input->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGamer::Look);
+
+		Input->BindAction(MoveAction, ETriggerEvent::Started, this, &AGamer::Walk);
 		Input->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AGamer::Move);
 		Input->BindAction(MoveAction, ETriggerEvent::Completed, this, &AGamer::Idle);
-		Input->BindAction(MoveAction, ETriggerEvent::Started, this, &AGamer::Walk);
-		Input->BindAction(JumpAction, ETriggerEvent::Started, this, &AGamer::BeginJump);
-		Input->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGamer::Look);
+
 		Input->BindAction(SprintAction, ETriggerEvent::Started, this, &AGamer::Sprint);
-		Input->BindAction(ScrollViewAction, ETriggerEvent::Triggered, this, &AGamer::ScrollView);
-		Input->BindAction(SwitchViewAction, ETriggerEvent::Started, this, &AGamer::SwitchView);
-		//Description:: Canceling the sprint event is activating the walk event, because when the character stops moving, it will
-		// automatically change its status to idle.When the character is in idle status, all actions will be canceled, so cancelling 
-		// the sprint event will not stop the character, but will allow the character to move forward.
 		Input->BindAction(SprintAction, ETriggerEvent::Completed, this, &AGamer::EndSprint);
+
 		Input->BindAction(SneakAction, ETriggerEvent::Started, this, &AGamer::Sneak);
 		Input->BindAction(SneakAction, ETriggerEvent::Completed, this, &AGamer::EndSneak);
+
+		Input->BindAction(JumpAction, ETriggerEvent::Started, this, &AGamer::BeginJump);
+
+		Input->BindAction(ScrollViewAction, ETriggerEvent::Triggered, this, &AGamer::ScrollView);
+		Input->BindAction(SwitchViewAction, ETriggerEvent::Started, this, &AGamer::SwitchView);
+
 		Input->BindAction(AttackAction, ETriggerEvent::Started, this, &AGamer::Attack);
 
 		Input->BindAction(MenuWindowAction, ETriggerEvent::Started, this, &AGamer::MenuWindow);
 	}
 }
 
+// Queue In Movements component is temporary 
+// Queue In Movements component is temporary 
+void AGamer::Idle() {
+	if (Action.bIsJumping) {
+		bQueueIsActive = true;
+		QueueAction = ECurrentAction::Idle;
+		return;
+	}
+	if (!Action.bIsWalking) return;
+	StopMoving();
+}
+
+void AGamer::Walk() {
+	if (bIsCharacterFrozen) return;
+	if (Action.bIsJumping) {
+		bQueueIsActive = true;
+		QueueAction = ECurrentAction::Walking;
+		return;
+	}
+	if (!Action.bIsIdle) return;
+	bWasWalkStarted = true;
+	SetAction(ECurrentAction::Walking);
+}
+
+//#Idea but not enough
+//GetCharacterMovement()->DisabledMovement();  
+//It is instand of couple if block, but it isn't worth. It is make the same thing.
+
+//Check if frozen is needed event if it seems to be useless;
 void AGamer::Move(const FInputActionValue& Value)
 {
+	if (bIsCharacterFrozen) return;
+	if (!bWasWalkStarted) { 
+		Walk();
+		return;
+	}
+	if (Action.bIsIdle) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("TT"));
 	const FVector2D VectorValue = Value.Get<FVector2D>();
 	const FRotator MRotator = Controller->GetControlRotation();
 	const FRotator YawRotator(0.f, MRotator.Yaw, 0.f);
@@ -89,27 +127,11 @@ void AGamer::Move(const FInputActionValue& Value)
 	AddMovementInput(RightVector,VectorValue.X);	
 }
 
-// Queue In Movements component is temporary 
-// Queue In Movements component is temporary 
-
-void AGamer::Idle() {
-	if (Action.bIsJumping){
-		bQueueIsActive = true;
-		QueueAction = ECurrentAction::Idle;
-		return;
-	}	
+void AGamer::Sneak()
+{
 	if (!Action.bIsWalking) return;
-	SetAction(ECurrentAction::Idle);
-}
-
-void AGamer::Walk() {
-	if (Action.bIsJumping) {
-		bQueueIsActive = true;
-		QueueAction = ECurrentAction::Walking;
-		return;
-	}
-	if (!Action.bIsIdle) return;
-	SetAction(ECurrentAction::Walking);
+	if (bQueueIsActive) bQueueIsActive = false;
+	SetAction(ECurrentAction::Sneaking);
 }
 
 void AGamer::EndSneak()
@@ -141,15 +163,9 @@ void AGamer::EndSprint()
 	SetAction(ECurrentAction::Walking);
  }
 
-void AGamer::Sneak()
-{
-	if (!Action.bIsWalking) return;
-	if (bQueueIsActive) bQueueIsActive = false;
-	SetAction(ECurrentAction::Sneaking);
-}
-
 void AGamer::Look(const FInputActionValue& Value)
 {
+	if (bIsCharacterFrozen) return;
 	const FVector2D ValueVector = Value.Get<FVector2D>();
 	AddControllerPitchInput(ValueVector.Y * -1);
 	AddControllerYawInput(ValueVector.X);
@@ -162,6 +178,7 @@ void AGamer::ScrollView(const FInputActionValue& Value)
 
 void AGamer::BeginJump()
 {
+	if (bIsCharacterFrozen) return;
 	if (Action.bIsJumping || GamerStats.Stamina <= 0.0f) return;
 	SetAction(ECurrentAction::Jumping);
 	Jump();
@@ -190,13 +207,14 @@ void AGamer::Attack() {
 }
 
 void AGamer::MenuWindow() {
-	if (!bIsMenuOpened) {
-		bIsMenuOpened = true;
+	if (!bIsCharacterFrozen) {
+		StopMoving();
+		bIsCharacterFrozen = true;
 		GameWidget->SetWidgetOnDisplay(0);
 		return;
 	}
 	GameWidget->TakeWidgetFromDisplay();
-	bIsMenuOpened = false;
+	bIsCharacterFrozen = false;
 }
 
 void AGamer::SwitchView()
@@ -230,7 +248,7 @@ void AGamer::Landed(const FHitResult& Hit)
 	float EndTimmer = GetWorld()->GetTimeSeconds();
 	float Dif = EndTimmer - FallingTimeStart;
 	float Health = GamerStats.Health;
-	if (Dif >= .9f) {
+	if (Dif >= 1.1f) {
 		Health -= .2f;
 	} else if (Dif >= 1.4f) {
 		Health -= .4f;
