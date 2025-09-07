@@ -10,9 +10,13 @@ ParagonCountess/
 *.VC.db
 *.sln
 
+# temp
+# temp
+# temp
+# temp
 Content/MsPack
 Content/Skin
-
+Content/Fab
 # Mac-specific
 .DS_Store
 
