@@ -193,37 +193,28 @@ protected:
 public:
 	UFUNCTION()
 	void SetAction(ECurrentAction ActionType) {
-		Action.bIsJumping = false;
-		Action.bIsSneaking = false;
-		Action.bIsSprinting = false;
-		Action.bIsWalking = false;
-		Action.bIsIdle = false;
-
-		if (ActionType != ECurrentAction::Jumping) {
-			CurrentAction = ActionType;
-		};
-
+		if (bIsGameFrozen) return;
 		switch (ActionType) {
-		case ECurrentAction::Walking:
-			Action.bIsWalking = true;
-			MoveComponent->MaxWalkSpeed = GamerSpeed.Normal;
-			break;
-		case ECurrentAction::Sneaking:
-			Action.bIsSneaking = true;
-			MoveComponent->MaxWalkSpeed = GamerSpeed.Sneak;
-			break;
-		case ECurrentAction::Sprinting:
-			Action.bIsSprinting = true;
-			MoveComponent->MaxWalkSpeed = GamerSpeed.Sprint;
-			break;
-		case ECurrentAction::Jumping:
-			Action.bIsJumping = true;
-			MoveComponent->MaxWalkSpeed = GamerSpeed.Sneak;
-			break;
-		case ECurrentAction::Idle:
-			Action.bIsIdle = true;
-			break;
-		}
+			case ECurrentAction::Walking:
+				bWasWalkStarted = true;
+				Action.bIsWalking = true;
+				Action.bIsIdle = false;
+				MoveComponent->MaxWalkSpeed = GamerSpeed.Normal;
+				break;
+			case ECurrentAction::Sneaking:
+				Action.bIsSneaking = true;
+				Action.bIsSprinting = false;
+				MoveComponent->MaxWalkSpeed = GamerSpeed.Sneak;
+				break;
+			case ECurrentAction::Sprinting:
+				Action.bIsSprinting = true;
+				Action.bIsSneaking = false;
+				MoveComponent->MaxWalkSpeed = GamerSpeed.Sprint;
+				break;
+			case ECurrentAction::Idle:
+				ActionReset();	
+				break;
+			}
 	}
 
 	struct {
@@ -235,7 +226,9 @@ public:
 	void SetStamina(float Value) {
 		float Current = GamerStats.Stamina;
 		if (Value <= 0.0f) {
-			SetAction(ECurrentAction::Walking);
+			if (Action.bIsSprinting) {
+				SetAction(ECurrentAction::Walking);
+			}
 			return;
 		}
 		if (Value >= 1.f) return;
@@ -252,11 +245,15 @@ public:
 		GameWidget->SetHealthBar(Value);
 	}
 
-	void StopMoving() {
+	void ActionReset() {
 		bWasWalkStarted = false;
-		SetAction(ECurrentAction::Idle);
+		Action.bIsJumping = false;	
+		Action.bIsWalking = false;
+		Action.bIsSprinting = false;
+		Action.bIsIdle = true;
+		Action.bIsJumping = false;
 	}
 
-
-	bool bIsCharacterFrozen = false;
+	bool bIsFalling = false;
+	bool bIsGameFrozen = false;
 };

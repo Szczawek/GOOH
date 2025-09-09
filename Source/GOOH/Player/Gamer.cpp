@@ -80,43 +80,32 @@ void AGamer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	}
 }
 
-// Queue In Movements component is temporary 
-// Queue In Movements component is temporary 
 void AGamer::Idle() {
 	if (Action.bIsJumping) {
-		bQueueIsActive = true;
-		QueueAction = ECurrentAction::Idle;
+		Action.bIsWalking = false;
+		Action.bIsSneaking = false;
+		Action.bIsSneaking = false;
 		return;
 	}
-	if (!Action.bIsWalking) return;
-	StopMoving();
+	SetAction(ECurrentAction::Idle);
 }
 
 void AGamer::Walk() {
-	if (bIsCharacterFrozen) return;
-	if (Action.bIsJumping) {
-		bQueueIsActive = true;
-		QueueAction = ECurrentAction::Walking;
-		return;
-	}
 	if (!Action.bIsIdle) return;
-	bWasWalkStarted = true;
 	SetAction(ECurrentAction::Walking);
 }
 
 //#Idea but not enough
 //GetCharacterMovement()->DisabledMovement();  
 //It is instand of couple if block, but it isn't worth. It is make the same thing.
-
-//Check if frozen is needed event if it seems to be useless;
 void AGamer::Move(const FInputActionValue& Value)
 {
-	if (bIsCharacterFrozen) return;
+	if (bIsGameFrozen) return;
 	if (!bWasWalkStarted) { 
 		Walk();
 		return;
 	}
-	if (Action.bIsIdle) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("TT"));
+
 	const FVector2D VectorValue = Value.Get<FVector2D>();
 	const FRotator MRotator = Controller->GetControlRotation();
 	const FRotator YawRotator(0.f, MRotator.Yaw, 0.f);
@@ -127,45 +116,65 @@ void AGamer::Move(const FInputActionValue& Value)
 	AddMovementInput(RightVector,VectorValue.X);	
 }
 
+void AGamer::BeginJump()
+{
+	if (bIsFalling || bIsGameFrozen || GamerStats.Stamina < .15f) return;
+	float Stamina = GamerStats.Stamina - .15f;
+	SetStamina(Stamina);
+	Action.bIsJumping = true;
+	Jump();
+}
+
+void AGamer::EndJump()
+{
+	StopJumping();
+	Action.bIsJumping = false;
+	if (Action.bIsSprinting) {
+		SetAction(ECurrentAction::Sprinting);
+		return;
+	}
+	if (Action.bIsSneaking) {
+		SetAction(ECurrentAction::Sneaking);
+		return;
+	}
+	if (Action.bIsWalking) {
+		GEngine->AddOnScreenDebugMessage(-1, .5f, FColor::Red, TEXT("Wa"));
+		SetAction(ECurrentAction::Walking);
+		return;
+	}
+	SetAction(ECurrentAction::Idle);
+
+}
+
 void AGamer::Sneak()
 {
-	if (!Action.bIsWalking) return;
-	if (bQueueIsActive) bQueueIsActive = false;
+	if (!bWasWalkStarted) return;
 	SetAction(ECurrentAction::Sneaking);
 }
 
 void AGamer::EndSneak()
 {
-	if (Action.bIsJumping && !bQueueIsActive) {
-		QueueAction = ECurrentAction::Walking;
-		bQueueIsActive = true;
-		return;
-	}
-	if (!Action.bIsSneaking) return;
+	if (!bWasWalkStarted) return;
+	Action.bIsSneaking = false;
 	SetAction(ECurrentAction::Walking);
 }
 
 void AGamer::Sprint()
 {	
-	if (!Action.bIsWalking) return;
-	if (bQueueIsActive) bQueueIsActive = false;
+	if (!bWasWalkStarted) return;
 	SetAction(ECurrentAction::Sprinting);
 }
 
 void AGamer::EndSprint()
 {
-	if (Action.bIsJumping && !bQueueIsActive && MoveComponent->Velocity.Size() > 500.f) {
-		QueueAction = ECurrentAction::Walking;
-		bQueueIsActive = true;
-		return;
-	}
 	if (!Action.bIsSprinting) return;
+	Action.bIsSprinting = false;
 	SetAction(ECurrentAction::Walking);
  }
 
 void AGamer::Look(const FInputActionValue& Value)
 {
-	if (bIsCharacterFrozen) return;
+	if (bIsGameFrozen) return;
 	const FVector2D ValueVector = Value.Get<FVector2D>();
 	AddControllerPitchInput(ValueVector.Y * -1);
 	AddControllerYawInput(ValueVector.X);
@@ -176,25 +185,6 @@ void AGamer::ScrollView(const FInputActionValue& Value)
 	const FVector2D ValueVector = Value.Get<FVector2D>();
 }
 
-void AGamer::BeginJump()
-{
-	if (bIsCharacterFrozen) return;
-	if (Action.bIsJumping || GamerStats.Stamina <= 0.0f) return;
-	SetAction(ECurrentAction::Jumping);
-	Jump();
-}
-
-void AGamer::EndJump()
-{
-	StopJumping();
-	if (bQueueIsActive) {
-		bQueueIsActive = false;
-		SetAction(QueueAction);
-		return;
-	}
-	SetAction(CurrentAction);
-}
-
 void AGamer::Attack() {
 	switch (ActiveWeapon) {
 		case EActiveWeapon::WhiteWeapon:
@@ -203,18 +193,17 @@ void AGamer::Attack() {
 		case EActiveWeapon::Weapon:
 		    break;
 	}
-
 }
 
 void AGamer::MenuWindow() {
-	if (!bIsCharacterFrozen) {
-		StopMoving();
-		bIsCharacterFrozen = true;
+	if (!bIsGameFrozen) {
+		ActionReset();
+		bIsGameFrozen = true;
 		GameWidget->SetWidgetOnDisplay(0);
 		return;
 	}
 	GameWidget->TakeWidgetFromDisplay();
-	bIsCharacterFrozen = false;
+	bIsGameFrozen = false;
 }
 
 void AGamer::SwitchView()
@@ -233,14 +222,13 @@ void AGamer::SwitchView()
 			FovCamera->SetActive(true);
 			GetMesh()->SetVisibility(true, true);
 			GetMesh()->SetCastHiddenShadow(false);
-
 	}
 }
 
 void AGamer::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
-
+	bIsFalling = false;
 	if (Action.bIsJumping) {
 		EndJump();
 	}
@@ -266,6 +254,7 @@ void AGamer::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PrevCut
 {
 	Super::OnMovementModeChanged(PrevMovementMode, PrevCutomMode);
 	if (MoveComponent->IsFalling()) {
+		bIsFalling = true;
 		FallingTimeStart = GetWorld()->GetTimeSeconds();
 	}
 }
