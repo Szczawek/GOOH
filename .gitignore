@@ -1,24 +1,26 @@
-# Unreal Engine intermediate files
+# Ignore build and intermediate files
 Binaries/
 DerivedDataCache/
 Intermediate/
 Saved/
-ParagonCountess/
-# VS files
-.vscode/
+Content/
 .vs/
 *.VC.db
+*.VC.opendb
+*.suo
+
+# Ignore IDE project files (can be regenerated)
 *.sln
+*.xcodeproj
+*.xcworkspace
 
-# temp
-# temp
-# temp
-# temp
-Content/MsPack
-Content/Skin
-Content/Fab
-# Mac-specific
+# Ignore platform-specific files
 .DS_Store
+Thumbs.db
 
-# Ignore build output
-Build/
+# Ignore crash reports
+*.dmp
+*.log
+*.editorconfig
+shadertoolsconfig.json
+*.vsconfig
