@@ -41,12 +41,12 @@ void AGamer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (CurrentAction == ECurrentAction::Sprinting && !Action.bIsJumping) {
+	if (Action.bIsSprinting && !Action.bIsJumping) {
 		float Stamina = GamerStats.Stamina - .1f * DeltaTime;
 		SetStamina(Stamina);
 	}
 
-	if (GamerStats.Stamina < 1.0f && CurrentAction != ECurrentAction::Sprinting) {
+	if (GamerStats.Stamina < 1.0f && !Action.bIsSprinting) {
 		float Stamina = GamerStats.Stamina + .1f * DeltaTime;
 		SetStamina(Stamina);
 	}
@@ -82,22 +82,23 @@ void AGamer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 void AGamer::Idle() {
 	if (Action.bIsJumping) {
+		bWasWalkStarted = false;
 		Action.bIsWalking = false;
-		Action.bIsSneaking = false;
-		Action.bIsSneaking = false;
+		Action.bIsSprinting = false;
+		Action.bIsIdle = true;
 		return;
 	}
 	SetAction(ECurrentAction::Idle);
 }
 
 void AGamer::Walk() {
-	if (!Action.bIsIdle) return;
+	if (bActiveSprint) {
+		SetAction(ECurrentAction::Sprinting);
+		return;	 
+	}
 	SetAction(ECurrentAction::Walking);
 }
 
-//#Idea but not enough
-//GetCharacterMovement()->DisabledMovement();  
-//It is instand of couple if block, but it isn't worth. It is make the same thing.
 void AGamer::Move(const FInputActionValue& Value)
 {
 	if (bIsGameFrozen) return;
@@ -105,7 +106,6 @@ void AGamer::Move(const FInputActionValue& Value)
 		Walk();
 		return;
 	}
-
 	const FVector2D VectorValue = Value.Get<FVector2D>();
 	const FRotator MRotator = Controller->GetControlRotation();
 	const FRotator YawRotator(0.f, MRotator.Yaw, 0.f);
@@ -129,17 +129,19 @@ void AGamer::EndJump()
 {
 	StopJumping();
 	Action.bIsJumping = false;
-	if (Action.bIsSprinting) {
-		SetAction(ECurrentAction::Sprinting);
-		return;
-	}
-	if (Action.bIsSneaking) {
-		SetAction(ECurrentAction::Sneaking);
-		return;
-	}
-	if (Action.bIsWalking) {
-		GEngine->AddOnScreenDebugMessage(-1, .5f, FColor::Red, TEXT("Wa"));
-		SetAction(ECurrentAction::Walking);
+	if (!Action.bIsIdle) {
+		if (Action.bIsSprinting) {
+			SetAction(ECurrentAction::Sprinting);
+			return;
+		}
+		if (Action.bIsSneaking) {
+			SetAction(ECurrentAction::Sneaking);
+			return;
+		}
+		if (Action.bIsWalking) {
+			SetAction(ECurrentAction::Walking);
+			return;
+		}
 		return;
 	}
 	SetAction(ECurrentAction::Idle);
@@ -159,14 +161,17 @@ void AGamer::EndSneak()
 	SetAction(ECurrentAction::Walking);
 }
 
+//Active Sprint isn't a copy; 
+//It's for walking start with sprint;
 void AGamer::Sprint()
 {	
+	bActiveSprint = true;
 	if (!bWasWalkStarted) return;
 	SetAction(ECurrentAction::Sprinting);
 }
-
 void AGamer::EndSprint()
 {
+	bActiveSprint = false;
 	if (!Action.bIsSprinting) return;
 	Action.bIsSprinting = false;
 	SetAction(ECurrentAction::Walking);
@@ -186,13 +191,18 @@ void AGamer::ScrollView(const FInputActionValue& Value)
 }
 
 void AGamer::Attack() {
-	switch (ActiveWeapon) {
-		case EActiveWeapon::WhiteWeapon:
-		case EActiveWeapon::Fist:
-		break;
-		case EActiveWeapon::Weapon:
-		    break;
+	if (!bIsCarringWeapon) {
+		if (GamerStats.Stamina > 0.1f) {
+			//Animation aren't the most important things, so ...
+			if (AttackMontage) {
+				PlayAnimMontage(AttackMontage);
+			}
+		}
 	}
+}
+
+void AGamer::StopAttack()
+{
 }
 
 void AGamer::MenuWindow() {

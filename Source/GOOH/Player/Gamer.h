@@ -145,18 +145,15 @@ public:
 	UGameUI* GameWidget;
 
 public:
-	bool bWasWalkStarted = false;
+	UPROPERTY(EditAnywhere, Category = "Animations")
+	UAnimMontage* AttackMontage;
 
 	// Enums/Structures
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
 	FGamerAction Action;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
-	ECurrentAction CurrentAction;
-	
-	ECurrentAction QueueAction;
-
-	bool bQueueIsActive = false;
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
+	ECurrentAction CurrentAction;*/
 	
 	// Development Option, to change;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Type of weapon")
@@ -170,7 +167,7 @@ public:
 	EActiveCamera ActiveCamera = EActiveCamera::Fov;
 
 
-	void Move(const FInputActionValue& Value);
+	void Move(const FInputActionValue& Value); 
 	void Look(const FInputActionValue& Value);
 	void ScrollView(const FInputActionValue& Value);
 	void BeginJump();
@@ -182,6 +179,7 @@ public:
 	void Walk();
 	void EndSneak();
 	void Attack();
+	void StopAttack();
 	void MenuWindow();
 	void SwitchView();
 
@@ -207,8 +205,10 @@ public:
 				MoveComponent->MaxWalkSpeed = GamerSpeed.Sneak;
 				break;
 			case ECurrentAction::Sprinting:
-				Action.bIsSprinting = true;
+				Action.bIsIdle = false;
+				bWasWalkStarted = true;
 				Action.bIsSneaking = false;
+				Action.bIsSprinting = true;
 				MoveComponent->MaxWalkSpeed = GamerSpeed.Sprint;
 				break;
 			case ECurrentAction::Idle:
@@ -251,9 +251,11 @@ public:
 		Action.bIsWalking = false;
 		Action.bIsSprinting = false;
 		Action.bIsIdle = true;
-		Action.bIsJumping = false;
 	}
 
+	bool bActiveSprint = false;
+	bool bWasWalkStarted = false;
 	bool bIsFalling = false;
 	bool bIsGameFrozen = false;
+	bool bIsCarringWeapon = false;
 };
