@@ -1,27 +1,34 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+#include "../Player/Gamer.h"
+#include "DeBox.h"
 
-
-#include "MapaObjects/DeBox.h"
-
-// Sets default values
 ADeBox::ADeBox()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	BoxMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoxMesh"));
+	BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
+	this->Tags.Add(FName("Destructable"));
 }
 
-// Called when the game starts or when spawned
 void ADeBox::BeginPlay()
 {
 	Super::BeginPlay();
+	BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ADeBox::OnComponentBeginOverlaped);
 	
 }
 
-// Called every frame
 void ADeBox::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ADeBox::OnComponentBeginOverlaped(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (AGamer* Player = Cast<AGamer>(OtherActor)) {
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("TRES"));
+		if (Player->bIsAttacking) {
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("2"));
+		}
+	}
 }
 

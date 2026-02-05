@@ -152,9 +152,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
 	FGamerAction Action;
 
-	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Action")
-	ECurrentAction CurrentAction;*/
-	
 	// Development Option, to change;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Type of weapon")
 	EActiveWeapon ActiveWeapon = EActiveWeapon::WhiteWeapon;
@@ -166,6 +163,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera type")
 	EActiveCamera ActiveCamera = EActiveCamera::Fov;
 
+	UPROPERTY(EditAnywhere, Category = "Collision")
+	TEnumAsByte<ECollisionChannel> TraceChannel = ECC_PhysicsBody;
 
 	void Move(const FInputActionValue& Value); 
 	void Look(const FInputActionValue& Value);
@@ -192,22 +191,17 @@ public:
 	UFUNCTION()
 	void SetAction(ECurrentAction ActionType) {
 		if (bIsGameFrozen) return;
+		ResetMovement();
 		switch (ActionType) {
 			case ECurrentAction::Walking:
-				bWasWalkStarted = true;
 				Action.bIsWalking = true;
-				Action.bIsIdle = false;
 				MoveComponent->MaxWalkSpeed = GamerSpeed.Normal;
 				break;
 			case ECurrentAction::Sneaking:
 				Action.bIsSneaking = true;
-				Action.bIsSprinting = false;
 				MoveComponent->MaxWalkSpeed = GamerSpeed.Sneak;
 				break;
 			case ECurrentAction::Sprinting:
-				Action.bIsIdle = false;
-				bWasWalkStarted = true;
-				Action.bIsSneaking = false;
 				Action.bIsSprinting = true;
 				MoveComponent->MaxWalkSpeed = GamerSpeed.Sprint;
 				break;
@@ -217,6 +211,13 @@ public:
 			}
 	}
 
+	void ResetMovement() {
+		bWasWalkStarted = true;
+		Action.bIsIdle = false;
+		Action.bIsWalking = false;
+		Action.bIsSneaking = false;
+		Action.bIsSprinting = false;
+	}
 	struct {
 		float Normal = 500.f;
 		float Sprint = 900.f;
@@ -253,8 +254,14 @@ public:
 		Action.bIsIdle = true;
 	}
 
+	bool bSmallJump = false;
+	bool bIsAttacking = false;
 	bool bActiveSprint = false;
+	bool bActiveSneak = false;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "status")
 	bool bWasWalkStarted = false;
+
 	bool bIsFalling = false;
 	bool bIsGameFrozen = false;
 	bool bIsCarringWeapon = false;

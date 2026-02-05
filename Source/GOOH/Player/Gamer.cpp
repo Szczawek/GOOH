@@ -17,6 +17,7 @@ AGamer::AGamer()
 	BodyCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Body Camera"));
 	BodyCamera->SetupAttachment(GetMesh());
 	MoveComponent->MaxWalkSpeed = GamerSpeed.Normal;
+	MoveComponent->JumpZVelocity = 620.f;
 }
 
 // Called when the game starts or when spawned
@@ -58,6 +59,8 @@ void AGamer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	
 	if (UEnhancedInputComponent* Input = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		Input->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGamer::Look);
+		Input->BindAction(ScrollViewAction, ETriggerEvent::Triggered, this, &AGamer::ScrollView);
+		Input->BindAction(SwitchViewAction, ETriggerEvent::Started, this, &AGamer::SwitchView);
 
 		Input->BindAction(MoveAction, ETriggerEvent::Started, this, &AGamer::Walk);
 		Input->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AGamer::Move);
@@ -71,10 +74,8 @@ void AGamer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 		Input->BindAction(JumpAction, ETriggerEvent::Started, this, &AGamer::BeginJump);
 
-		Input->BindAction(ScrollViewAction, ETriggerEvent::Triggered, this, &AGamer::ScrollView);
-		Input->BindAction(SwitchViewAction, ETriggerEvent::Started, this, &AGamer::SwitchView);
-
 		Input->BindAction(AttackAction, ETriggerEvent::Started, this, &AGamer::Attack);
+		Input->BindAction(AttackAction, ETriggerEvent::Completed, this, &AGamer::StopAttack);
 
 		Input->BindAction(MenuWindowAction, ETriggerEvent::Started, this, &AGamer::MenuWindow);
 	}
@@ -95,6 +96,10 @@ void AGamer::Walk() {
 	if (bActiveSprint) {
 		SetAction(ECurrentAction::Sprinting);
 		return;	 
+	}
+	if (bActiveSneak) {
+		SetAction(ECurrentAction::Sneaking);
+		return;
 	}
 	SetAction(ECurrentAction::Walking);
 }
@@ -118,9 +123,15 @@ void AGamer::Move(const FInputActionValue& Value)
 
 void AGamer::BeginJump()
 {
-	if (bIsFalling || bIsGameFrozen || GamerStats.Stamina < .15f) return;
-	float Stamina = GamerStats.Stamina - .15f;
-	SetStamina(Stamina);
+	if (bIsFalling || bIsGameFrozen) return;
+	if (GamerStats.Stamina < .15f) {
+		MoveComponent->JumpZVelocity = 300.f;
+		bSmallJump = true;
+	}
+	else {
+		float Stamina = GamerStats.Stamina - .15f;
+		SetStamina(Stamina);
+	}
 	Action.bIsJumping = true;
 	Jump();
 }
@@ -128,6 +139,10 @@ void AGamer::BeginJump()
 void AGamer::EndJump()
 {
 	StopJumping();
+	if (bSmallJump) {
+		MoveComponent->JumpZVelocity = 620.f;
+		bSmallJump = false;
+	}
 	Action.bIsJumping = false;
 	if (!Action.bIsIdle) {
 		if (Action.bIsSprinting) {
@@ -150,21 +165,23 @@ void AGamer::EndJump()
 
 void AGamer::Sneak()
 {
+	bActiveSneak = true;
+	bActiveSprint = false;
 	if (!bWasWalkStarted) return;
 	SetAction(ECurrentAction::Sneaking);
 }
 
 void AGamer::EndSneak()
 {
-	if (!bWasWalkStarted) return;
+	bActiveSneak = false;
+	if (!bWasWalkStarted || !Action.bIsSneaking) return;
 	Action.bIsSneaking = false;
 	SetAction(ECurrentAction::Walking);
 }
 
-//Active Sprint isn't a copy; 
-//It's for walking start with sprint;
 void AGamer::Sprint()
 {	
+	bActiveSneak = false;	
 	bActiveSprint = true;
 	if (!bWasWalkStarted) return;
 	SetAction(ECurrentAction::Sprinting);
@@ -187,14 +204,62 @@ void AGamer::Look(const FInputActionValue& Value)
 
 void AGamer::ScrollView(const FInputActionValue& Value)
 {
-	const FVector2D ValueVector = Value.Get<FVector2D>();
+	float Length = SpringArm->TargetArmLength;
+	//The -1.f is controlling direction;
+	float Direct = Value.Get<float>() * -1.f;
+	if (Direct == -1.f && Length <= 150.f) return;
+	if (Direct == 1.f && Length >= 350.f) return;
+	const float SpeedValue = 30.f;
+	Length += SpeedValue * Direct;
+	SpringArm->TargetArmLength = Length;
 }
 
 void AGamer::Attack() {
+	UCameraComponent* CurrentCam;
+	//Camera Location;
+	FVector Start;
+	//To Remove
+	FRotator Rotation;
+	float CameraDist = 200.f;
+	if (BodyCamera->IsActive()) {
+		CurrentCam = BodyCamera;
+		Start = CurrentCam->GetComponentLocation();
+	} else {
+		//Fove Mode Only
+		CameraDist += 200.f;
+		CurrentCam = FovCamera;
+		GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(Start,Rotation);
+	}
+	//Direction
+	FVector ForwardVector = CurrentCam->GetForwardVector();
+	//Distans
+	float Range = bIsCarringWeapon ? 2000.f : CameraDist;
+	FVector End = Start + (ForwardVector * Range);
+
+	FHitResult Hit;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	GetWorld()->LineTraceSingleByChannel(Hit, Start, End, TraceChannel, QueryParams);
+	DrawDebugLine(GetWorld(), Start, End, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, 5.0f, 0, 1.0f);
+	
+
+	if (Hit.bBlockingHit && IsValid(Hit.GetActor())) {
+		AActor* HitActor = Hit.GetActor();
+		if (HitActor) {
+			if (HitActor->ActorHasTag(FName("Destructable"))) {
+				HitActor->Destroy();
+			}
+		}
+	}
+
 	if (!bIsCarringWeapon) {
 		if (GamerStats.Stamina > 0.1f) {
+			float Value = GamerStats.Stamina - 0.05f;
+			SetStamina(Value);
 			//Animation aren't the most important things, so ...
 			if (AttackMontage) {
+				bIsAttacking = true;
 				PlayAnimMontage(AttackMontage);
 			}
 		}
@@ -203,6 +268,7 @@ void AGamer::Attack() {
 
 void AGamer::StopAttack()
 {
+	bIsAttacking = false;
 }
 
 void AGamer::MenuWindow() {
@@ -218,20 +284,25 @@ void AGamer::MenuWindow() {
 
 void AGamer::SwitchView()
 {
+	USkeletalMeshComponent* MeshBody = GetMesh();
+	bool bIsBoneValid = MeshBody->GetBoneIndex(TEXT("neck_01")) != INDEX_NONE;
 	switch(ActiveCamera) {
 		case EActiveCamera::Fov:
+			SpringArm->TargetArmLength = 200.f;
 			ActiveCamera = EActiveCamera::Body;
 			FovCamera->SetActive(false);
 			BodyCamera->SetActive(true);
-			GetMesh()->SetVisibility(false, true);
-			GetMesh()->SetCastHiddenShadow(true);
+			if (!bIsBoneValid) break;
+			MeshBody->HideBoneByName(TEXT("neck_01"), EPhysBodyOp::PBO_None);
+			MeshBody->SetCastHiddenShadow(true);
 			break;
 		case EActiveCamera::Body:
 			ActiveCamera = EActiveCamera::Fov;
 			BodyCamera->SetActive(false);
 			FovCamera->SetActive(true);
-			GetMesh()->SetVisibility(true, true);
-			GetMesh()->SetCastHiddenShadow(false);
+			MeshBody->SetCastHiddenShadow(false);
+			if (!bIsBoneValid) break;
+			MeshBody->UnHideBoneByName(TEXT("neck_01"));
 	}
 }
 
