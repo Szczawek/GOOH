@@ -10,7 +10,8 @@
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"UMG",
-				"Engine"
+				"Engine",
+				"ChaosModularVehicleEngine"
 			]
 		}
 	],
@@ -28,6 +29,14 @@
 		},
 		{
 			"Name": "StaticMeshEditorModeling",
+			"Enabled": true
+		},
+		{
+			"Name": "ChaosModularVehicleExamples",
+			"Enabled": true
+		},
+		{
+			"Name": "ChaosModularVehicle",
 			"Enabled": true
 		}
 	]

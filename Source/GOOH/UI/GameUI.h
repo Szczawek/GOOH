@@ -37,6 +37,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<UUserWidget> MenuWidgetClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Widgets")
+	TSubclassOf<UUserWidget> GameOverClass;
+
 private:
 	UPROPERTY()
 	APlayerController* Controller;
@@ -49,7 +53,7 @@ public:
 	void SetHealthBar(float Value) const;
 
 	UFUNCTION()
-	void SetWidgetOnDisplay(int8 Index) const;
+	void SetWidgetOnDisplay(uint8 Index, bool bChangeMenuMode) const;
 
 	UFUNCTION()
 	void TakeWidgetFromDisplay() const;

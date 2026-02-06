@@ -13,7 +13,7 @@ Content/
 *.sln
 *.xcodeproj
 *.xcworkspace
-
+*.htm
 # Ignore platform-specific files
 .DS_Store
 Thumbs.db

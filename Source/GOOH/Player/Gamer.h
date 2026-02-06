@@ -179,7 +179,7 @@ public:
 	void EndSneak();
 	void Attack();
 	void StopAttack();
-	void MenuWindow();
+	void SetMenuWindow();
 	void SwitchView();
 
 protected:
@@ -239,9 +239,6 @@ public:
 
 	void SetHealth(float Value) {
 		float Current = GamerStats.Health;
-		if (Current - Value < 0.f) {
-			Value = 0.f;
-		}
 		GamerStats.Health = Value;
 		GameWidget->SetHealthBar(Value);
 	}
@@ -265,4 +262,8 @@ public:
 	bool bIsFalling = false;
 	bool bIsGameFrozen = false;
 	bool bIsCarringWeapon = false;
+	bool bIsMenuOpened = false;
+
+	UFUNCTION()
+	void RestartGame();
 };

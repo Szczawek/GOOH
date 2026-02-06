@@ -1,4 +1,3 @@
-#include "../Player/Gamer.h"
 #include "DeBox.h"
 
 ADeBox::ADeBox()
@@ -12,8 +11,6 @@ ADeBox::ADeBox()
 void ADeBox::BeginPlay()
 {
 	Super::BeginPlay();
-	BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &ADeBox::OnComponentBeginOverlaped);
-	
 }
 
 void ADeBox::Tick(float DeltaTime)
@@ -21,14 +18,3 @@ void ADeBox::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
-
-void ADeBox::OnComponentBeginOverlaped(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	if (AGamer* Player = Cast<AGamer>(OtherActor)) {
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("TRES"));
-		if (Player->bIsAttacking) {
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("2"));
-		}
-	}
-}
-

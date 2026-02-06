@@ -18,6 +18,10 @@ void UGameUI::NativeConstruct()
 			UUserWidget* MenuWidget = CreateWidget<UUserWidget>(GetWorld(), MenuWidgetClass);
 			WidgetSwitcher->AddChild(MenuWidget);
 		}
+		if (GameOverClass) {
+			UUserWidget* GameOverWidget = CreateWidget<UUserWidget>(GetWorld(), GameOverClass);
+			WidgetSwitcher->AddChild(GameOverWidget);
+		}
 		WidgetSwitcher->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
@@ -32,10 +36,12 @@ void UGameUI::SetHealthBar(float Value) const
 	HealthBar->SetPercent(Value);
 }
 
-void UGameUI::SetWidgetOnDisplay(int8 Index) const
+void UGameUI::SetWidgetOnDisplay(uint8 Index, bool bChangeMenuMode) const
 {
-	SetMenuMode();
-	WidgetSwitcher->SetVisibility(ESlateVisibility::Visible);
+	if (bChangeMenuMode) {
+		SetMenuMode();
+		WidgetSwitcher->SetVisibility(ESlateVisibility::Visible);
+	}
 	WidgetSwitcher->SetActiveWidgetIndex(Index);
 }
 

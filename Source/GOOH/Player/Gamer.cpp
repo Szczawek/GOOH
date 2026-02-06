@@ -77,7 +77,7 @@ void AGamer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		Input->BindAction(AttackAction, ETriggerEvent::Started, this, &AGamer::Attack);
 		Input->BindAction(AttackAction, ETriggerEvent::Completed, this, &AGamer::StopAttack);
 
-		Input->BindAction(MenuWindowAction, ETriggerEvent::Started, this, &AGamer::MenuWindow);
+		Input->BindAction(MenuWindowAction, ETriggerEvent::Started, this, &AGamer::SetMenuWindow);
 	}
 }
 
@@ -124,12 +124,12 @@ void AGamer::Move(const FInputActionValue& Value)
 void AGamer::BeginJump()
 {
 	if (bIsFalling || bIsGameFrozen) return;
-	if (GamerStats.Stamina < .15f) {
+	if (GamerStats.Stamina < .1f) {
 		MoveComponent->JumpZVelocity = 300.f;
 		bSmallJump = true;
 	}
 	else {
-		float Stamina = GamerStats.Stamina - .15f;
+		float Stamina = GamerStats.Stamina - .1f;
 		SetStamina(Stamina);
 	}
 	Action.bIsJumping = true;
@@ -215,6 +215,7 @@ void AGamer::ScrollView(const FInputActionValue& Value)
 }
 
 void AGamer::Attack() {
+	if (bIsGameFrozen) return;
 	UCameraComponent* CurrentCam;
 	//Camera Location;
 	FVector Start;
@@ -241,7 +242,7 @@ void AGamer::Attack() {
 	QueryParams.AddIgnoredActor(this);
 
 	GetWorld()->LineTraceSingleByChannel(Hit, Start, End, TraceChannel, QueryParams);
-	DrawDebugLine(GetWorld(), Start, End, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, 5.0f, 0, 1.0f);
+	//DrawDebugLine(GetWorld(), Start, End, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, 5.0f, 0, 1.0f);
 	
 
 	if (Hit.bBlockingHit && IsValid(Hit.GetActor())) {
@@ -271,15 +272,19 @@ void AGamer::StopAttack()
 	bIsAttacking = false;
 }
 
-void AGamer::MenuWindow() {
+void AGamer::SetMenuWindow()
+{
+	if (bIsGameFrozen && !bIsMenuOpened) return;
 	if (!bIsGameFrozen) {
 		ActionReset();
 		bIsGameFrozen = true;
-		GameWidget->SetWidgetOnDisplay(0);
+		bIsMenuOpened = true;
+		GameWidget->SetWidgetOnDisplay(0,true);
 		return;
 	}
 	GameWidget->TakeWidgetFromDisplay();
 	bIsGameFrozen = false;
+	bIsMenuOpened = false;
 }
 
 void AGamer::SwitchView()
@@ -294,13 +299,13 @@ void AGamer::SwitchView()
 			BodyCamera->SetActive(true);
 			if (!bIsBoneValid) break;
 			MeshBody->HideBoneByName(TEXT("neck_01"), EPhysBodyOp::PBO_None);
-			MeshBody->SetCastHiddenShadow(true);
+			//MeshBody->SetCastHiddenShadow(true);
 			break;
 		case EActiveCamera::Body:
 			ActiveCamera = EActiveCamera::Fov;
 			BodyCamera->SetActive(false);
 			FovCamera->SetActive(true);
-			MeshBody->SetCastHiddenShadow(false);
+		//	MeshBody->SetCastHiddenShadow(false);
 			if (!bIsBoneValid) break;
 			MeshBody->UnHideBoneByName(TEXT("neck_01"));
 	}
@@ -316,19 +321,16 @@ void AGamer::Landed(const FHitResult& Hit)
 
 	float EndTimmer = GetWorld()->GetTimeSeconds();
 	float Dif = EndTimmer - FallingTimeStart;
+	if (Dif < 1.1f) return;
 	float Health = GamerStats.Health;
-	if (Dif >= 1.1f) {
-		Health -= .2f;
-	} else if (Dif >= 1.4f) {
-		Health -= .4f;
-	}
-	else if (Dif >= 2.2f) {
-		Health = 0.f;
-	}
-	if (Health < 0.0f) {
-		Health = 0.0f;
-	}
+	Health -= Dif * 0.3f;
 	SetHealth(Health);
+	if (Health <= 0.f) {
+		SetStamina(0.0f);
+		GameWidget->SetWidgetOnDisplay(1, true);
+		ActionReset();
+		bIsGameFrozen = true;
+	}
 }
 
 void AGamer::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PrevCutomMode)
@@ -338,4 +340,12 @@ void AGamer::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PrevCut
 		bIsFalling = true;
 		FallingTimeStart = GetWorld()->GetTimeSeconds();
 	}
+}
+
+void AGamer::RestartGame()
+{
+	GameWidget->TakeWidgetFromDisplay();
+	SetStamina(1.f);
+	SetHealth(1.f);
+	bIsGameFrozen = false;
 }

@@ -38,6 +38,6 @@ void UMenuUI::OnClickQuit()
 
 void UMenuUI::OnClickResume()
 {                                                                                            
-	GamerRef->MenuWindow();
+	GamerRef->SetMenuWindow();
 }
 
