@@ -11,11 +11,7 @@
 #include <GameFramework/CharacterMovementComponent.h>
 #include <InputMappingContext.h>
 #include "Gamer.generated.h"
-
-
-// All new properties should be on end of enum. 
-// By default it is loading index 0 #IDLE
-
+ 
 UENUM()
 enum class ECurrentAction : uint8 {
 	Idle,
