@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.6",
+	"EngineAssociation": "5.7",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -9,9 +9,9 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
-				"UMG",
-				"Engine",
-				"ChaosModularVehicleEngine"
+				"ChaosModularVehicleEngine",
+				"ChaosVehicles",
+				"Engine"
 			]
 		}
 	],
@@ -22,10 +22,11 @@
 		},
 		{
 			"Name": "VisualStudioTools",
-			"Enabled": false,
+			"Enabled": true,
 			"SupportedTargetPlatforms": [
 				"Win64"
-			]
+			],
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/362651520df94e4fa65492dbcba44ae2"
 		},
 		{
 			"Name": "StaticMeshEditorModeling",
@@ -37,6 +38,10 @@
 		},
 		{
 			"Name": "ChaosModularVehicle",
+			"Enabled": true
+		},
+		{
+			"Name": "ChaosVehiclesPlugin",
 			"Enabled": true
 		}
 	]

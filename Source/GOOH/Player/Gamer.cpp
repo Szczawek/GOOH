@@ -1,26 +1,44 @@
 #include "Gamer.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Camera/CameraComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "../UI/GameUI.h"
+#include "InputAction.h"
+#include "InputMappingContext.h"
 #include "EnhancedInputComponent.h"
-#include <EnhancedInputSubsystems.h>
+#include "EnhancedInputSubsystems.h"
 
-// Sets default values
 AGamer::AGamer()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	MoveComponent = GetCharacterMovement();
-	FovCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Fov Camera"));
-	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("Camera Arm"));
-	FovCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
-	SpringArm->SetupAttachment(RootComponent);
-	SpringArm->bUsePawnControlRotation = true;
-	BodyCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("Body Camera"));
-	BodyCamera->SetupAttachment(GetMesh());
 	MoveComponent->MaxWalkSpeed = GamerSpeed.Normal;
-	MoveComponent->JumpZVelocity = 620.f;
+	MoveComponent->JumpZVelocity = 580.f;
+	MoveComponent->GravityScale = 1.7f;
+
+	FullMesh = GetMesh();
+	FullMesh->bCastHiddenShadow = true;
+
+	FovCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FovCamera"));
+	BodyCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("BodyCamera"));
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComponent"));
+	BodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BodyMesh"));
+
+	BodyCamera->SetupAttachment(BodyMesh);
+	FovCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+	BodyMesh->SetupAttachment(RootComponent);
+	SpringArm->SetupAttachment(RootComponent);
+
+	SpringArm->TargetArmLength = 300.f;
+	SpringArm->bUsePawnControlRotation = true;
+	BodyCamera->bUsePawnControlRotation = true;
+
+	BodyMesh->CastShadow = false;
+	BodyMesh->SetOnlyOwnerSee(true);
+	BodyMesh->SetOwnerNoSee(true);
 }
 
-// Called when the game starts or when spawned
 void AGamer::BeginPlay()
 {
 	Super::BeginPlay();
@@ -37,7 +55,6 @@ void AGamer::BeginPlay()
 	}
 }
 
-// Called every frame
 void AGamer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -77,7 +94,7 @@ void AGamer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		Input->BindAction(AttackAction, ETriggerEvent::Started, this, &AGamer::Attack);
 		Input->BindAction(AttackAction, ETriggerEvent::Completed, this, &AGamer::StopAttack);
 
-		Input->BindAction(MenuWindowAction, ETriggerEvent::Started, this, &AGamer::SetMenuWindow);
+		Input->BindAction(MenuWindowAction, ETriggerEvent::Started, this,&AGamer::OpenMenu);
 	}
 }
 
@@ -205,36 +222,31 @@ void AGamer::Look(const FInputActionValue& Value)
 void AGamer::ScrollView(const FInputActionValue& Value)
 {
 	float Length = SpringArm->TargetArmLength;
-	//The -1.f is controlling direction;
+	////The -1.f is controlling direction;
 	float Direct = Value.Get<float>() * -1.f;
-	if (Direct == -1.f && Length <= 150.f) return;
-	if (Direct == 1.f && Length >= 350.f) return;
-	const float SpeedValue = 30.f;
+	//if (Direct == -1.f && Length >= 350.f) return;
+	const float SpeedValue = 25.f;
 	Length += SpeedValue * Direct;
+	if (Length >= MaxArmLength || Length <= MinArmLength) return;
 	SpringArm->TargetArmLength = Length;
 }
 
 void AGamer::Attack() {
 	if (bIsGameFrozen) return;
-	UCameraComponent* CurrentCam;
-	//Camera Location;
+	TObjectPtr<UCameraComponent> Camera;
 	FVector Start;
-	//To Remove
 	FRotator Rotation;
-	float CameraDist = 200.f;
+	float Distance = 300.f;
 	if (BodyCamera->IsActive()) {
-		CurrentCam = BodyCamera;
-		Start = CurrentCam->GetComponentLocation();
+		Camera = BodyCamera;
+		Start = Camera->GetComponentLocation();
 	} else {
-		//Fove Mode Only
-		CameraDist += 200.f;
-		CurrentCam = FovCamera;
+		Distance += 300.f;
+		Camera = FovCamera;
 		GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(Start,Rotation);
 	}
-	//Direction
-	FVector ForwardVector = CurrentCam->GetForwardVector();
-	//Distans
-	float Range = bIsCarringWeapon ? 2000.f : CameraDist;
+	FVector ForwardVector = Camera->GetForwardVector();
+	float Range = bIsCarringWeapon ? 2000.f : Distance;
 	FVector End = Start + (ForwardVector * Range);
 
 	FHitResult Hit;
@@ -244,7 +256,6 @@ void AGamer::Attack() {
 	GetWorld()->LineTraceSingleByChannel(Hit, Start, End, TraceChannel, QueryParams);
 	//DrawDebugLine(GetWorld(), Start, End, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, 5.0f, 0, 1.0f);
 	
-
 	if (Hit.bBlockingHit && IsValid(Hit.GetActor())) {
 		AActor* HitActor = Hit.GetActor();
 		if (HitActor) {
@@ -253,7 +264,6 @@ void AGamer::Attack() {
 			}
 		}
 	}
-
 	if (!bIsCarringWeapon) {
 		if (GamerStats.Stamina > 0.1f) {
 			float Value = GamerStats.Stamina - 0.05f;
@@ -272,42 +282,33 @@ void AGamer::StopAttack()
 	bIsAttacking = false;
 }
 
-void AGamer::SetMenuWindow()
+void AGamer::OpenMenu()
 {
-	if (bIsGameFrozen && !bIsMenuOpened) return;
-	if (!bIsGameFrozen) {
-		ActionReset();
-		bIsGameFrozen = true;
-		bIsMenuOpened = true;
-		GameWidget->SetWidgetOnDisplay(0,true);
-		return;
-	}
-	GameWidget->TakeWidgetFromDisplay();
-	bIsGameFrozen = false;
-	bIsMenuOpened = false;
+	GameWidget->SetWidgetByIndex(0);
+	//SetGamePause();
+}
+
+void AGamer::InteractEvent()
+{
+	if (!bInteractionEnable) return;
 }
 
 void AGamer::SwitchView()
 {
-	USkeletalMeshComponent* MeshBody = GetMesh();
-	bool bIsBoneValid = MeshBody->GetBoneIndex(TEXT("neck_01")) != INDEX_NONE;
-	switch(ActiveCamera) {
-		case EActiveCamera::Fov:
-			SpringArm->TargetArmLength = 200.f;
-			ActiveCamera = EActiveCamera::Body;
-			FovCamera->SetActive(false);
-			BodyCamera->SetActive(true);
-			if (!bIsBoneValid) break;
-			MeshBody->HideBoneByName(TEXT("neck_01"), EPhysBodyOp::PBO_None);
-			//MeshBody->SetCastHiddenShadow(true);
-			break;
-		case EActiveCamera::Body:
-			ActiveCamera = EActiveCamera::Fov;
-			BodyCamera->SetActive(false);
-			FovCamera->SetActive(true);
-		//	MeshBody->SetCastHiddenShadow(false);
-			if (!bIsBoneValid) break;
-			MeshBody->UnHideBoneByName(TEXT("neck_01"));
+	switch (ActiveCamera) {
+	case EActiveCamera::Fov:
+		ActiveCamera = EActiveCamera::Body;
+		FovCamera->SetActive(false);
+		BodyCamera->SetActive(true);
+		FullMesh->SetOwnerNoSee(true);
+		BodyMesh->SetOwnerNoSee(false);
+		break;
+	case EActiveCamera::Body:
+		ActiveCamera = EActiveCamera::Fov;
+		BodyCamera->SetActive(false);
+		FovCamera->SetActive(true);
+		FullMesh->SetOwnerNoSee(false);
+		BodyMesh->SetOwnerNoSee(true);
 	}
 }
 
@@ -327,9 +328,9 @@ void AGamer::Landed(const FHitResult& Hit)
 	SetHealth(Health);
 	if (Health <= 0.f) {
 		SetStamina(0.0f);
-		GameWidget->SetWidgetOnDisplay(1, true);
+		GameWidget->SetWidgetByIndex(1);
 		ActionReset();
-		bIsGameFrozen = true;
+		//bIsGameFrozen = true;
 	}
 }
 
@@ -342,10 +343,30 @@ void AGamer::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PrevCut
 	}
 }
 
+void AGamer::SetStamina(float Value)
+{
+	float Current = GamerStats.Stamina;
+	if (Value <= 0.0f) {
+		if (Action.bIsSprinting) {
+			SetAction(ECurrentAction::Walking);
+		}
+		return;
+	}
+	if (Value >= 1.f) return;
+	GamerStats.Stamina = Value;
+	GameWidget->SetStaminaBar(Value);
+}
+
+void AGamer::SetHealth(float Value)
+{
+	float Current = GamerStats.Health;
+	GamerStats.Health = Value;
+	GameWidget->SetHealthBar(Value);
+}
+
 void AGamer::RestartGame()
 {
-	GameWidget->TakeWidgetFromDisplay();
+	GameWidget->BackToGameWidget();
 	SetStamina(1.f);
 	SetHealth(1.f);
-	bIsGameFrozen = false;
 }

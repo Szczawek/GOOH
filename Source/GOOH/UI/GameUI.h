@@ -1,15 +1,12 @@
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include <Components/TextBlock.h>
-#include <Components/CanvasPanel.h>
-#include <Components/WidgetSwitcher.h>
-#include <Components/ProgressBar.h>
-#include <Components/Button.h>
 #include "GameUI.generated.h"
 
+class UButton;
+class UWidgetSwitcher;
+class UProgressBar;
 
 UCLASS()
 class GOOH_API UGameUI : public UUserWidget
@@ -18,27 +15,20 @@ class GOOH_API UGameUI : public UUserWidget
 
 protected:
 	virtual void NativeConstruct() override;
-
 public:
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
-	TObjectPtr<UTextBlock> UserName;
-
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UProgressBar> HealthBar;
 
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UProgressBar> StaminaBar;
 
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
-	TObjectPtr<UCanvasPanel> CanvasPanel;
-
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UWidgetSwitcher> WidgetSwitcher;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<UUserWidget> MenuWidgetClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Widgets")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
 	TSubclassOf<UUserWidget> GameOverClass;
 
 private:
@@ -53,15 +43,18 @@ public:
 	void SetHealthBar(float Value) const;
 
 	UFUNCTION()
-	void SetWidgetOnDisplay(uint8 Index, bool bChangeMenuMode) const;
+	void SetWidgetByIndex(uint8 Index) const;
 
 	UFUNCTION()
-	void TakeWidgetFromDisplay() const;
+	void BackToGameWidget() const;
+
+	UPROPERTY()
+	bool bIsMenuModeEnable = false;
 
 	UFUNCTION()
 	void SetMenuMode() const {
 		if (Controller) {
-			Controller->SetInputMode(FInputModeGameAndUI());
+			Controller->SetInputMode(FInputModeUIOnly());
 			Controller->bShowMouseCursor = true;
 			Controller->bEnableClickEvents = true;
 			Controller->bEnableMouseOverEvents = true;

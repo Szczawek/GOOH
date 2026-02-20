@@ -1,12 +1,12 @@
 #include "GameUI.h"
+#include "Components/WidgetSwitcher.h"
+#include "Components/ProgressBar.h"
+#include "Components/Button.h"
 
 void UGameUI::NativeConstruct()
 {
 	Super::NativeConstruct();
 	Controller = GetOwningPlayer();
-	if (UserName) {
-		UserName->SetText(FText::FromString(TEXT("Szczawik")));
-	}
 	if (HealthBar) {
 		HealthBar->SetPercent(1.f);
 	}
@@ -14,15 +14,15 @@ void UGameUI::NativeConstruct()
 		StaminaBar->SetPercent(1.f);
 	}
 	if (WidgetSwitcher) {
+		WidgetSwitcher->SetVisibility(ESlateVisibility::Collapsed);
 		if (MenuWidgetClass) {
-			UUserWidget* MenuWidget = CreateWidget<UUserWidget>(GetWorld(), MenuWidgetClass);
+			TObjectPtr<UUserWidget> MenuWidget = CreateWidget<UUserWidget>(GetWorld(),MenuWidgetClass);
 			WidgetSwitcher->AddChild(MenuWidget);
 		}
 		if (GameOverClass) {
-			UUserWidget* GameOverWidget = CreateWidget<UUserWidget>(GetWorld(), GameOverClass);
+			TObjectPtr<UUserWidget> GameOverWidget = CreateWidget<UUserWidget>(GetWorld(), GameOverClass);
 			WidgetSwitcher->AddChild(GameOverWidget);
 		}
-		WidgetSwitcher->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 
@@ -36,16 +36,16 @@ void UGameUI::SetHealthBar(float Value) const
 	HealthBar->SetPercent(Value);
 }
 
-void UGameUI::SetWidgetOnDisplay(uint8 Index, bool bChangeMenuMode) const
+void UGameUI::SetWidgetByIndex(uint8 Index) const
 {
-	if (bChangeMenuMode) {
+	if (!bIsMenuModeEnable) {
 		SetMenuMode();
 		WidgetSwitcher->SetVisibility(ESlateVisibility::Visible);
 	}
 	WidgetSwitcher->SetActiveWidgetIndex(Index);
 }
 
-void UGameUI::TakeWidgetFromDisplay() const
+void UGameUI::BackToGameWidget() const
 {
 	RemoveMenuMode();
 	WidgetSwitcher->SetVisibility(ESlateVisibility::Collapsed);

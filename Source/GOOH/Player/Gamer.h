@@ -2,16 +2,18 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include <InputAction.h>
-#include <Blueprint/UserWidget.h>
-#include "../UI/GameUI.h"
-#include <Camera/CameraComponent.h>
-#include <Components/CanvasPanel.h>
-#include <GameFramework/SpringArmComponent.h>
 #include <GameFramework/CharacterMovementComponent.h>
-#include <InputMappingContext.h>
 #include "Gamer.generated.h"
- 
+
+class USkeletalMeshComponent;
+class UCameraComponent;
+class USpringArmComponent;
+class UGameUI;
+class UInputMappingContext;
+class UInputAction;
+struct FInputActionValue;
+
+
 UENUM()
 enum class ECurrentAction : uint8 {
 	Idle,
@@ -87,6 +89,22 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	TObjectPtr<USpringArmComponent> SpringArm;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	TObjectPtr<UCameraComponent> FovCamera;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	TObjectPtr<UCameraComponent> BodyCamera;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
+	TObjectPtr<USkeletalMeshComponent> BodyMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
+	TObjectPtr<USkeletalMeshComponent> FullMesh;
+public:
 	UPROPERTY()
 	APlayerController* PlayerController;
 
@@ -118,17 +136,10 @@ public:
 	UInputAction* SwitchViewAction;
 
 	UPROPERTY(EditAnywhere, Category = "Inputs")
+	TObjectPtr<UInputAction> InteractAction;
+
+	UPROPERTY(EditAnywhere, Category = "Inputs")
 	UInputMappingContext* GamerContext;
-
-	//Cameras 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	USpringArmComponent* SpringArm;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	UCameraComponent* FovCamera;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	UCameraComponent* BodyCamera;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UCharacterMovementComponent* MoveComponent;
@@ -175,8 +186,10 @@ public:
 	void EndSneak();
 	void Attack();
 	void StopAttack();
-	void SetMenuWindow();
 	void SwitchView();
+
+	void OpenMenu();
+	void InteractEvent();
 
 protected:
 	virtual void Landed(const FHitResult& Hit) override;
@@ -220,24 +233,8 @@ public:
 		float Sneak = 300.f;
 	} GamerSpeed;
 
-	void SetStamina(float Value) {
-		float Current = GamerStats.Stamina;
-		if (Value <= 0.0f) {
-			if (Action.bIsSprinting) {
-				SetAction(ECurrentAction::Walking);
-			}
-			return;
-		}
-		if (Value >= 1.f) return;
-		GamerStats.Stamina = Value;
-		GameWidget->SetStaminaBar(Value);
-	}
-
-	void SetHealth(float Value) {
-		float Current = GamerStats.Health;
-		GamerStats.Health = Value;
-		GameWidget->SetHealthBar(Value);
-	}
+	void SetStamina(float Value);
+	void SetHealth(float Value);
 
 	void ActionReset() {
 		bWasWalkStarted = false;
@@ -260,6 +257,13 @@ public:
 	bool bIsCarringWeapon = false;
 	bool bIsMenuOpened = false;
 
+	bool bInteractionEnable = false;
+
 	UFUNCTION()
 	void RestartGame();
+
+	private: 
+		//SprigArm
+		float MaxArmLength = 400.f;
+		float MinArmLength = 120.f;
 };

@@ -1,12 +1,13 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include <Components/CapsuleComponent.h>
 #include "Shop.generated.h"
 
+class UStaticMeshComponent;
+class UBoxComponent;
+class USkeletalMeshComponent;
+class AGamer;
 
 UCLASS()
 class GOOH_API AShop : public AActor
@@ -14,28 +15,30 @@ class GOOH_API AShop : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	AShop();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:	
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 public:
+	UPROPERTY(EditAnyWhere, Category = "Mesh");
+	TObjectPtr<UStaticMeshComponent> BuildingMesh;
 
 	UPROPERTY(EditAnyWhere, Category = "Mesh")
-	UStaticMeshComponent* ShopMesh;
+	TObjectPtr<USkeletalMeshComponent> SellerMesh;
 
-	UPROPERTY(EditAnywhere, Category = "Mesh")
-	USkeletalMeshComponent* SellerMesh;
+	UPROPERTY(EditAnyWhere, Category = "Collision")
+	TObjectPtr<UBoxComponent> BoxCollision;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
-	UCapsuleComponent* SellerCollision;
-	
+private:
+	TObjectPtr<AGamer> Player;
+
+private:
 	UFUNCTION()
 	void OnBeginOverlaped(UPrimitiveComponent* PrimitiveComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	UFUNCTION()
+	void OnEndOverlaped(UPrimitiveComponent* PrimitiveComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex);
 };

@@ -4,6 +4,7 @@ DerivedDataCache/
 Intermediate/
 Saved/
 Content/
+Plugins/
 .vs/
 *.VC.db
 *.VC.opendb

@@ -1,31 +1,30 @@
-	// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Shop.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "../Player/Gamer.h"
 
-// Sets default values
+
 AShop::AShop()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	ShopMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Shop Mesh"));
-	ShopMesh->SetupAttachment(RootComponent);
+	BuildingMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BuildingMesh"));
+	BuildingMesh->SetupAttachment(RootComponent);
 	
+	BoxCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxCollision"));
 	SellerMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Seller Mesh"));
-	SellerCollision = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Seller collision"));
-	SellerCollision->SetupAttachment(ShopMesh);
-	SellerMesh->SetupAttachment(SellerCollision);
+	SellerMesh->SetupAttachment(BoxCollision);
+	BoxCollision->SetupAttachment(BuildingMesh);
 }
 
-// Called when the game starts or when spawned
 void AShop::BeginPlay()
 {
 	Super::BeginPlay();
-	SellerCollision->OnComponentBeginOverlap.AddDynamic(this, &AShop::OnBeginOverlaped);
+	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Purple, TEXT("Nie test 222"));
+	BoxCollision->OnComponentBeginOverlap.AddDynamic(this, &AShop::OnBeginOverlaped);
+	BoxCollision->OnComponentEndOverlap.AddDynamic(this, &AShop::OnEndOverlaped);
 	
 }
-
-// Called every frame
 void AShop::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -34,6 +33,13 @@ void AShop::Tick(float DeltaTime)
 
 void AShop::OnBeginOverlaped(UPrimitiveComponent* PrimitiveComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Test"));
+	if (Player = Cast<AGamer>(OtherActor)) {
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("2313213123"));
+	}
+	
+}
+
+void AShop::OnEndOverlaped(UPrimitiveComponent* PrimitiveComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex)
+{
 }
 

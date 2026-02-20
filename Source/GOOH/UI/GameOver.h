@@ -2,10 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include <Components/Button.h>
-#include "../Player/Gamer.h"
 #include "GameOver.generated.h"
 
+class UButton;
 UCLASS()
 class GOOH_API UGameOver : public UUserWidget
 {
@@ -16,10 +15,8 @@ protected:
 
 public:
 	UPROPERTY(BlueprintReadWrite, meta=(BindWidget))
-	TObjectPtr<UButton> RestartGameBtn;
+	TObjectPtr<UButton> RestartBtn;
 public:
 	UFUNCTION()
 	void OnClickRestart();
-protected:
-	AGamer* Player;
 };

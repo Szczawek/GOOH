@@ -2,9 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Components/StaticMeshComponent.h"
-#include "Components/BoxComponent.h"
 #include "DeBox.generated.h"
+
+class UBoxComponent;
+class UStaticMeshComponent;
 
 UCLASS()
 class GOOH_API ADeBox : public AActor
@@ -22,8 +23,8 @@ public:
 
 public:
 	UPROPERTY(EditAnyWhere, Category="Mesh")
-	UStaticMeshComponent* BoxMesh;
+	TObjectPtr<UStaticMeshComponent> BoxMesh;
 
 	UPROPERTY(EditAnywhere, Category="Colision")
-	UBoxComponent* BoxCollision;
+	TObjectPtr<UBoxComponent> BoxCollision;
 };
